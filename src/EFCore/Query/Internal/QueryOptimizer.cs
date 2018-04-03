@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -85,6 +87,43 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal
             queryModel.TransformExpressions(new SubQueryMemberPushDownExpressionVisitor(queryCompilationContext).Visit);
             queryModel.TransformExpressions(new ExistsToAnyRewritingExpressionVisitor().Visit);
             queryModel.TransformExpressions(new AllAnyToContainsRewritingExpressionVisitor().Visit);
+        }
+
+        /// <summary>
+        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
+        ///     directly from your code. This API may change or be removed in future releases.
+        /// </summary>
+        public override void VisitOrderByClause(OrderByClause orderByClause, QueryModel queryModel, int index)
+        {
+            var newOrderings = new List<Ordering>();
+
+            var changed = false;
+            foreach (var ordering in orderByClause.Orderings)
+            {
+                if (ordering.Expression is NewExpression newExpression)
+                {
+                    changed = true;
+                    foreach (var argument in newExpression.Arguments)
+                    {
+                        newOrderings.Add(new Ordering(argument, ordering.OrderingDirection));
+                    }
+                }
+                else
+                {
+                    newOrderings.Add(ordering);
+                }
+            }
+
+            if (changed)
+            {
+                orderByClause.Orderings.Clear();
+                foreach (var newOrdering in newOrderings)
+                {
+                    orderByClause.Orderings.Add(newOrdering);
+                }
+            }
+
+            base.VisitOrderByClause(orderByClause, queryModel, index);
         }
 
         /// <summary>

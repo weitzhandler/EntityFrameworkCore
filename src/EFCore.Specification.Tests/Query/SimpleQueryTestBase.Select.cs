@@ -761,5 +761,11 @@ namespace Microsoft.EntityFrameworkCore.Query
         {
             AssertQueryScalar<Customer, short>(cs => cs.Select(c => c.CustomerID == "ALFKI" ? (short)1 : (short)2));
         }
+
+        [ConditionalFact]
+        public virtual void Select_bool_constant()
+        {
+            AssertQueryScalar<Customer, bool>(cs => cs.Select(c => c.CustomerID == "ALFKI" ? true : false));
+        }
     }
 }

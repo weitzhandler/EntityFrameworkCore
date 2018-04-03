@@ -3374,6 +3374,20 @@ namespace Microsoft.EntityFrameworkCore.Query
         }
 
         [ConditionalFact]
+        public virtual void Correlated_collections_basic_projecting_constant_bool()
+        {
+            AssertQuery<Gear>(
+                gs => from g in gs
+                      where g.Nickname != "Marcus"
+                      orderby g.Nickname
+                      select (from w in g.Weapons
+                              where w.IsAutomatic || w.Name != "foo"
+                              select true).ToList(),
+                assertOrder: true,
+                elementAsserter: CollectionAsserter<bool>());
+        }
+
+        [ConditionalFact]
         public virtual void Correlated_collections_projection_of_collection_thru_navigation()
         {
             AssertQuery<Gear>(
@@ -4630,6 +4644,126 @@ namespace Microsoft.EntityFrameworkCore.Query
         {
             AssertQuery<Squad>(
                 ss => ss.Where(s => s.Name == "Kilo").Where(s => s.Members.Where(m => m.HasSoulPatch).Select(m => m.SquadId).FirstOrDefault() != 0).Select(s => s.Name));
+        }
+
+        [ConditionalFact]
+        public virtual void Select_subquery_projecting_single_constant_int()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Select(s => new { s.Name, Gear = s.Members.Where(g => g.HasSoulPatch).Select(g => 42).FirstOrDefault() });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Select_subquery_projecting_single_constant_string()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Select(s => new { s.Name, Gear = s.Members.Where(g => g.HasSoulPatch).Select(g => "Foo").FirstOrDefault() });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Select_subquery_projecting_single_constant_bool()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Select(s => new { s.Name, Gear = s.Members.Where(g => g.HasSoulPatch).Select(g => true).FirstOrDefault() });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Select_subquery_projecting_single_constant_inside_anonymous()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Select(s => new { s.Name, Gear = s.Members.Where(g => g.HasSoulPatch).Select(g => new { One = 1 }).FirstOrDefault() });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Select_subquery_projecting_multiple_constants_inside_anonymous()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Select(s => new { s.Name, Gear = s.Members.Where(g => g.HasSoulPatch).Select(g => new { True = true, False = false }).FirstOrDefault() });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Order_by_anonymous_type1()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.OrderByDescending(s => new { s.Name });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Order_by_anonymous_type2()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.OrderByDescending(s => new { Number = 42, s.Name, s.Id });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Include_with_order_by_constant()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Include(s => s.Members).OrderBy(s => 42);
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Include_with_order_by_anonymous_type1()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Include(s => s.Members).OrderBy(s => new { Answer = 42, s.Name });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Include_with_order_by_anonymous_type2()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Include(s => s.Members).OrderBy(s => new { s.Name, One = 1, Two = 2, Three = 3 });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Include_groupby_constant()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Include(s => s.Members).GroupBy(s => 1);
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Include_groupby_anonymous_type()
+        {
+            using (var ctx = CreateContext())
+            {
+                var query = ctx.Squads.Include(s => s.Members).GroupBy(s => new { Key = s.Name });
+                var result = query.ToList();
+            }
         }
 
         // Remember to add any new tests to Async version of this test class

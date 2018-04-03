@@ -9,6 +9,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Query.Expressions;
+using Microsoft.EntityFrameworkCore.Query.ExpressionVisitors.Internal;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Utilities;
@@ -170,9 +171,6 @@ namespace Microsoft.EntityFrameworkCore.Query.ExpressionVisitors
 
             switch (expression)
             {
-                case ConstantExpression constantExpression:
-                    return constantExpression;
-
                 // To save mappings so that we can compose afterwards
                 case NewExpression newExpression:
                     return VisitNew(newExpression);
@@ -189,8 +187,9 @@ namespace Microsoft.EntityFrameworkCore.Query.ExpressionVisitors
 
                     return qsre;
 
-                // Skip over Include method
-                case MethodCallExpression methodCallExpression when IncludeCompiler.IsIncludeMethod(methodCallExpression):
+                // Skip over Include and Correlated Collection methods
+                case MethodCallExpression methodCallExpression
+                when IncludeCompiler.IsIncludeMethod(methodCallExpression) || CorrelatedCollectionOptimizingVisitor.IsCorrelatedCollectionMethod(methodCallExpression):
                     return methodCallExpression;
 
                 // Group By key translation to cover composite key cases
@@ -228,20 +227,26 @@ namespace Microsoft.EntityFrameworkCore.Query.ExpressionVisitors
 
             // Fallback
             var sqlExpression
-                        = _sqlTranslatingExpressionVisitorFactory
-                            .Create(
-                                QueryModelVisitor,
-                                _isGroupAggregate ? _groupAggregateTargetSelectExpression : _targetSelectExpression,
-                                inProjection: true)
-                            .Visit(expression);
+                = _sqlTranslatingExpressionVisitorFactory
+                    .Create(
+                        QueryModelVisitor,
+                        _isGroupAggregate ? _groupAggregateTargetSelectExpression : _targetSelectExpression,
+                        inProjection: true)
+                    .Visit(expression);
 
             if (sqlExpression == null)
             {
+                // in case non-translatable constant, e.g. new DTO()
+                if (expression is ConstantExpression)
+                {
+                    return expression;
+                }
+
                 QueryModelVisitor.RequiresClientProjection = true;
 
                 return base.Visit(expression);
             }
-            else if (sqlExpression is ConstantExpression)
+            else if (sqlExpression is ConstantExpression && QueryModelVisitor.ParentQueryModelVisitor == null)
             {
                 return base.Visit(expression);
             }
@@ -267,6 +272,12 @@ namespace Microsoft.EntityFrameworkCore.Query.ExpressionVisitors
 
                 if (targetExpression.Type == typeof(ValueBuffer))
                 {
+                    if (sqlExpression is ConstantExpression
+                        && sqlExpression.Type == typeof(bool))
+                    {
+                        sqlExpression = new ExplicitCastExpression(sqlExpression, typeof(bool));
+                    }
+
                     var index = _targetSelectExpression.AddToProjection(sqlExpression);
 
                     _sourceExpressionProjectionMapping[expression] = _targetSelectExpression.Projection[index];
