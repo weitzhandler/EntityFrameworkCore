@@ -236,11 +236,11 @@ namespace Microsoft.EntityFrameworkCore.Query.ExpressionVisitors
 
             if (sqlExpression == null)
             {
-                // in case non-translatable constant, e.g. new DTO()
-                if (expression is ConstantExpression)
-                {
-                    return expression;
-                }
+                //// in case non - translatable constant, e.g. new DTO()
+                //if (expression is ConstantExpression)
+                //{
+                //    return expression;
+                //}
 
                 QueryModelVisitor.RequiresClientProjection = true;
 

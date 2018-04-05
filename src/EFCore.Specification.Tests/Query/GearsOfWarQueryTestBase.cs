@@ -4731,7 +4731,8 @@ namespace Microsoft.EntityFrameworkCore.Query
         {
             using (var ctx = CreateContext())
             {
-                var query = ctx.Squads.Include(s => s.Members).OrderBy(s => new { Answer = 42, s.Name });
+                var query = ctx.Squads.Include(s => s.Members).OrderBy(s => new { Answer = 42, });
+                //var query = ctx.Squads.Include(s => s.Members).OrderBy(s => new { Answer = 42, s.Name });
                 var result = query.ToList();
             }
         }
@@ -4742,6 +4743,30 @@ namespace Microsoft.EntityFrameworkCore.Query
             using (var ctx = CreateContext())
             {
                 var query = ctx.Squads.Include(s => s.Members).OrderBy(s => new { s.Name, One = 1, Two = 2, Three = 3 });
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Include_with_order_by_anonymous_type3()
+        {
+            using (var ctx = CreateContext())
+            {
+                //var query = ctx.Squads.Include(s => s.Members).OrderBy(s => new { One = 1, Two = 2, s.Name, Three = 3 });
+                //var query = ctx.Squads.Include(s => s.Members).OrderBy(s => 1);
+                var query = ctx.Gears.Include(g => g.Weapons).OrderBy(g => 1);
+                var result = query.ToList();
+            }
+        }
+
+        [ConditionalFact]
+        public virtual void Include_with_order_by_anonymous_type4()
+        {
+            using (var ctx = CreateContext())
+            {
+                //var query = ctx.Squads.Include(s => s.Members).OrderBy(s => new { One = 1, Two = 2, s.Name, Three = 3 });
+                //var query = ctx.Squads.Include(s => s.Members).OrderBy(s => 1);
+                var query = ctx.Gears.Include(g => g.Weapons).OrderBy(g => new { g.Nickname });
                 var result = query.ToList();
             }
         }

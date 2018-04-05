@@ -6688,6 +6688,22 @@ WHERE [s.Members].[Discriminator] IN (N'Officer', N'Gear')
 ORDER BY [t].[Name], [t].[c], [t].[c0], [t].[c1], [t].[Id]");
         }
 
+        public override void Include_with_order_by_anonymous_type3()
+        {
+            base.Include_with_order_by_anonymous_type3();
+
+            AssertSql(
+                @"");
+        }
+
+        public override void Include_with_order_by_anonymous_type4()
+        {
+            base.Include_with_order_by_anonymous_type4();
+
+            AssertSql(
+                @"");
+        }
+
         public override void Include_groupby_constant()
         {
             base.Include_groupby_constant();
